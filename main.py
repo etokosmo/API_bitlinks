@@ -24,7 +24,7 @@ def shorten_link(token: str, url: str) -> str:
     }
     response = requests.post(url_bitlinks, headers=headers, json=payload)
     response.raise_for_status()
-    return response.json()['link']
+    return response.json()['id']
 
 
 def count_clicks(token: str, bitlink: str, unit: str = 'day', units: int = -1) -> int:
@@ -74,7 +74,7 @@ def start():
             try:
                 bitlink_result = shorten_link(TOKEN, link)
             except requests.exceptions.HTTPError:
-                print('Incorrect link')
+                print('Incorrect link or incorrect TOKEN')
             else:
                 print('Битлинк', bitlink_result)
 
