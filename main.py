@@ -1,16 +1,12 @@
-import requests
-import urllib.parse
-from dotenv import load_dotenv
 import os
+import urllib.parse
+
+import requests
+from dotenv import load_dotenv
 
 load_dotenv()
 
-TOKEN = os.getenv("TOKEN")
-
-
-class IncorrectUrl(Exception):
-    """Response status is not 200 OK"""
-    pass
+BITLINKS_TOKEN = os.getenv("TOKEN")
 
 
 def shorten_link(token: str, url: str) -> str:
@@ -27,11 +23,15 @@ def shorten_link(token: str, url: str) -> str:
     return response.json()['id']
 
 
+def parse_link(url: str) -> str:
+    """Return netloc + path from url"""
+    parsed = urllib.parse.urlparse(url)
+    return parsed.netloc + parsed.path
+
+
 def count_clicks(token: str, bitlink: str, unit: str = 'day', units: int = -1) -> int:
     """Count clicks on bitlink"""
-    parsed = urllib.parse.urlparse(bitlink)
-    bitlink_url = parsed.netloc + parsed.path
-    url_clicks_summary = f'https://api-ssl.bitly.com/v4/bitlinks/{bitlink_url}/clicks/summary'
+    url_clicks_summary = f'https://api-ssl.bitly.com/v4/bitlinks/{parse_link(bitlink)}/clicks/summary'
     headers = {
         'Authorization': f'Bearer {token}',
     }
@@ -45,39 +45,31 @@ def count_clicks(token: str, bitlink: str, unit: str = 'day', units: int = -1) -
     return clicks_count
 
 
-def is_bitlink(url) -> bool:
-    """check url for bitlink"""
-    if not requests.get(url).ok:
-        raise IncorrectUrl
-    parsed = urllib.parse.urlparse(url)
-    if parsed.netloc in ('bit.ly', 'bitly.is'):
-        return True
-    return False
+def is_bitlink(bitlink):
+    """Check url for bitlink"""
+    check_bitlink_url = f'https://api-ssl.bitly.com/v4/bitlinks/{parse_link(bitlink)}'
+    headers = {
+        'Authorization': f'Bearer {BITLINKS_TOKEN}',
+    }
+    response = requests.get(check_bitlink_url, headers=headers)
+    return response.ok
 
 
-def start():
+def main():
     """Start program"""
     link = input('Введите ссылку: ')
     try:
-        link_booled = is_bitlink(link)
-    except IncorrectUrl:
-        print('Incorrect link. Response status is not 200 OK')
-    else:
-        if link_booled:
-            try:
-                clicks_count = count_clicks(TOKEN, link)
-            except (requests.exceptions.HTTPError, NameError):
-                print('Incorrect bitlink')
-            else:
-                print('Количество кликов:', clicks_count)
+        response = requests.get(link)
+        response.raise_for_status()
+        if is_bitlink(link):
+            clicks_count = count_clicks(BITLINKS_TOKEN, link)
+            print('Количество кликов:', clicks_count)
         else:
-            try:
-                bitlink_result = shorten_link(TOKEN, link)
-            except requests.exceptions.HTTPError:
-                print('Incorrect link or incorrect TOKEN')
-            else:
-                print('Битлинк', bitlink_result)
+            bitlink_result = shorten_link(BITLINKS_TOKEN, link)
+            print('Битлинк', bitlink_result)
+    except (requests.exceptions.ConnectionError, requests.exceptions.MissingSchema, requests.exceptions.HTTPError):
+        print('Incorrect url')
 
 
 if __name__ == '__main__':
-    start()
+    main()
