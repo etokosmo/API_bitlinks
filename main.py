@@ -1,3 +1,4 @@
+import argparse
 import os
 import urllib.parse
 
@@ -49,7 +50,12 @@ def main():
     load_dotenv()
     bitlink_token = os.getenv("TOKEN")
     bitlink_header = {'Authorization': f'Bearer {bitlink_token}'}
-    entered_link = input('Введите ссылку: ')
+    parser = argparse.ArgumentParser(
+        description='При вводе полной ссылки выводится сокращенная ссылка. При вводе сокращенной ссылки показывается количество переходов по ней'
+    )
+    parser.add_argument('link', help='Введите полную ссылку')
+    args = parser.parse_args()
+    entered_link = args.link
     try:
         response = requests.get(entered_link)
         response.raise_for_status()
@@ -66,5 +72,4 @@ def main():
 if __name__ == '__main__':
     main()
 
-# https://bit.ly/3JhwFuG
-# https://github.com/
+
